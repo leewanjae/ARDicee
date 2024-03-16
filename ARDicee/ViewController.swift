@@ -18,24 +18,15 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         
         // Set the view's delegate
         sceneView.delegate = self
-        
-        // 정육면체
-        // let cube = SCNBox(width: 0.1, height: 0.1, length: 0.1, chamferRadius: 0.01)
-        
-        // 구
-        let sphere = SCNSphere(radius: 0.2)
-        
-        let material = SCNMaterial()
-        // 이미지 등록
-        material.diffuse.contents = UIImage(named: "art.scnassets/moon.jpg")
-        sphere.materials = [material]
-        
-        let node = SCNNode()
-        node.position = SCNVector3(x: 0, y: 0.1, z: -0.5)
-        node.geometry = sphere
-        
-        sceneView.scene.rootNode.addChildNode(node)
+       
         sceneView.automaticallyUpdatesLighting = true
+        
+        let diceScene = SCNScene(named: "art.scnassets/diceCollada.scn")!
+        // 재순환적으로 노드에 있는 모든 서브트리를 포함시켜 트리를 검색할 수 있게 해준다.
+        if let diceNode = diceScene.rootNode.childNode(withName: "Dice", recursively: true) {
+            diceNode.position = SCNVector3(x: 0, y: 0, z: -0.1)
+            sceneView.scene.rootNode.addChildNode(diceNode)
+        }
     }
     
     override func viewWillAppear(_ animated: Bool) {
