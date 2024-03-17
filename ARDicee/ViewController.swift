@@ -11,6 +11,8 @@ import ARKit
 
 class ViewController: UIViewController, ARSCNViewDelegate {
     
+    var diceArray = [SCNNode]()
+    
     @IBOutlet var sceneView: ARSCNView!
     
     override func viewDidLoad() {
@@ -61,19 +63,52 @@ class ViewController: UIViewController, ARSCNViewDelegate {
                         y: hitResult.worldTransform.columns.3.y + diceNode.boundingSphere.radius, // 단순 3.y만 설정시 그리드와 겹치게 주사위가 생김 따라서 너비의 반경을 더해줌
                         z: hitResult.worldTransform.columns.3.z
                     )
+                    
+                    diceArray.append(diceNode)
+                    
                     sceneView.scene.rootNode.addChildNode(diceNode)
-                    
-                    let randomX = Float(arc4random_uniform(4) + 1) * (Float.pi/2)
-                    let randomZ = Float(arc4random_uniform(4) + 1) * (Float.pi/2)
-                    
-                    diceNode.runAction(
-                        SCNAction.rotateBy(
-                            x: CGFloat(randomX * 5),
-                            y: 0, z: CGFloat(randomZ * 5),
-                            duration: 0.5
-                        )
-                    )
+                    roll(dice: diceNode)
                 }
+            }
+        }
+    }
+    
+    func rollAll() {
+        if !diceArray.isEmpty {
+            for dice in diceArray {
+                roll(dice: dice)
+            }
+        }
+    }
+    
+    func roll(dice: SCNNode) {
+        let randomX = Float(arc4random_uniform(4) + 1) * (Float.pi/2)
+        let randomZ = Float(arc4random_uniform(4) + 1) * (Float.pi/2)
+        
+        dice.runAction(
+            SCNAction.rotateBy(
+                x: CGFloat(randomX * 5),
+                y: 0, 
+                z: CGFloat(randomZ * 5),
+                duration: 0.5
+            )
+        )
+    }
+    
+    // 네비게이션 바 눌렀을 때 주사위 돌아가게
+    @IBAction func rollAgain(_ sender: UIBarButtonItem) {
+        rollAll()
+    }
+    
+    // 디바이스 흔들었을 때 주사위 돌아가게
+    override func motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
+        rollAll()
+    }
+    
+    @IBAction func removeAllDice(_ sender: UIBarButtonItem) {
+        if !diceArray.isEmpty {
+            for dice in diceArray {
+                dice.removeFromParentNode()
             }
         }
     }
@@ -83,7 +118,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {
         if anchor is ARPlaneAnchor { // 해당 코드는 위의 planeDetection으로 수평면을 탐지 후 그 값 여부에 따라 실행이 갈림
             let planeAnchor = anchor as! ARPlaneAnchor
-            let plane = SCNPlane(width: CGFloat(planeAnchor.extent.x), height: CGFloat(planeAnchor.extent.z)) // height아니고 length
+            let plane = SCNPlane(width: CGFloat(planeAnchor.extent.x), height: CGFloat(planeAnchor.extent.z)) // height아니고 length넣음
             
             let planeNode = SCNNode()
             planeNode.position = SCNVector3(x: planeAnchor.center.x, y: 0, z: planeAnchor.center.z)
@@ -95,6 +130,8 @@ class ViewController: UIViewController, ARSCNViewDelegate {
             planeNode.geometry = plane
             
             node.addChildNode(planeNode)
-        } else { return print("render error") }
+        } else {
+            return
+        }
     }
 }
