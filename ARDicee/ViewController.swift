@@ -15,8 +15,8 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        self.sceneView.debugOptions = [ARSCNDebugOptions.showFeaturePoints] // 해당 debugOption 설정 시 탐지 포인트들이 보임
+        // 해당 debugOption 설정 시 탐지 포인트들이 보임, 장치가 환경을 어떻게 인식하는지 시각화
+        self.sceneView.debugOptions = [ARSCNDebugOptions.showFeaturePoints]
         
         // Set the view's delegate
         sceneView.delegate = self
@@ -29,13 +29,9 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         super.viewWillAppear(animated)
         
         // Create a session configuration
-        let configuration = ARWorldTrackingConfiguration()
-        
-        // 수평면 탐지를 가능하게 함
-        configuration.planeDetection = .horizontal
-        
-        // Run the view's session
-        sceneView.session.run(configuration)
+        let configuration = ARWorldTrackingConfiguration() // 3D공간에서 위치와 방향 추적
+        configuration.planeDetection = .horizontal // 수평면 탐지를 가능하게 함
+        sceneView.session.run(configuration) // Run the view's session
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -51,14 +47,13 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         if let touch = touches.first {
             let touchLocation = touch.location(in: sceneView)
             
-            // ipone의 x,y를 기반으로 z축 산출?
             // 터치한 실제 위치와 동일하게 해줌
-            let results = sceneView.hitTest(touchLocation, types: .existingPlaneUsingExtent)
+            guard let query = sceneView.raycastQuery(from: touchLocation, allowing: .existingPlaneGeometry, alignment: .horizontal) else { return print("query error")}
+            let results = sceneView.session.raycast(query)
             
             if let hitResult = results.first {
-                print(hitResult)
-                
                 let diceScene = SCNScene(named: "art.scnassets/diceCollada.scn")!
+                
                 // 재순환적으로 노드에 있는 모든 서브트리를 포함시켜 트리를 검색할 수 있게 해준다.
                 if let diceNode = diceScene.rootNode.childNode(withName: "Dice", recursively: true) {
                     diceNode.position = SCNVector3(
@@ -67,6 +62,17 @@ class ViewController: UIViewController, ARSCNViewDelegate {
                         z: hitResult.worldTransform.columns.3.z
                     )
                     sceneView.scene.rootNode.addChildNode(diceNode)
+                    
+                    let randomX = Float(arc4random_uniform(4) + 1) * (Float.pi/2)
+                    let randomZ = Float(arc4random_uniform(4) + 1) * (Float.pi/2)
+                    
+                    diceNode.runAction(
+                        SCNAction.rotateBy(
+                            x: CGFloat(randomX * 5),
+                            y: 0, z: CGFloat(randomZ * 5),
+                            duration: 0.5
+                        )
+                    )
                 }
             }
         }
@@ -77,7 +83,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {
         if anchor is ARPlaneAnchor { // 해당 코드는 위의 planeDetection으로 수평면을 탐지 후 그 값 여부에 따라 실행이 갈림
             let planeAnchor = anchor as! ARPlaneAnchor
-            let plane = SCNPlane(width: CGFloat(planeAnchor.extent.x), height: CGFloat(planeAnchor.extent.z)) // y넣으면 작동안함 z로 넣자
+            let plane = SCNPlane(width: CGFloat(planeAnchor.extent.x), height: CGFloat(planeAnchor.extent.z)) // height아니고 length
             
             let planeNode = SCNNode()
             planeNode.position = SCNVector3(x: planeAnchor.center.x, y: 0, z: planeAnchor.center.z)
@@ -89,8 +95,6 @@ class ViewController: UIViewController, ARSCNViewDelegate {
             planeNode.geometry = plane
             
             node.addChildNode(planeNode)
-        } else {
-            return
-        }
+        } else { return print("render error") }
     }
 }
